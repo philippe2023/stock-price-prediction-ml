@@ -1,5 +1,3 @@
-
-# import modules needed
 import pandas as pd
 import numpy as np
 import yfinance as yf
@@ -7,7 +5,7 @@ import plotly as pt
 import streamlit as st
 from datetime import date
 from prophet import Prophet
-from prophet.plot import plot_plotly 
+from neuralprophet import NeuralProphet
 from plotly import graph_objs as go
 
 START = "2010-01-01"
@@ -23,8 +21,7 @@ stocks = (
     'BKNG', 'MS', 'ISRG', 'SPGI', 'ZTS', 'INTU', 'FIS', 'USB', 'RTX', 'DE', 'C', 'BLK', 'PLD', 'MMM', 'IBM', 'NOW',
     'SYK', 'CB', 'MO', 'EL', 'BA', 'ADP', 'CI', 'CL', 'SO', 'MRNA', 'LMT', 'TGT', 'ADI', 'GE', 'MDT', 'ABBV', 'WFC',
     'CVS', 'LRCX', 'WM', 'PGR', 'EW', 'ITW', 'CME', 'NEE', 'AON', 'FISV', 'TRV'
-    )
-
+)
 
 selected_stocks = st.selectbox("Select dataset for prediction", stocks)
 
@@ -34,7 +31,7 @@ period = n_years * 365
 @st.cache_data
 def load_data(ticker):
     data = yf.download(ticker, START, TODAY)
-    data.reset_index(inplace = True)
+    data.reset_index(inplace=True)
     return data
 
 data_load_state = st.text("Load data...")
@@ -46,33 +43,29 @@ st.write(data.tail())
 
 def plot_raw_data():
     fig = go.Figure()
-    #fig.add_trace(go.Scatter(x=data['Date'], y=data['Open'], name='Stock_open'))
     fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock_close'))
-    #fig.add_trace(go.Scatter(x=data['Date'], y=data['Low'], name='Stock_Low'))
-    #fig.add_trace(go.Scatter(x=data['Date'], y=data['High'], name='Stock_High'))
-
     fig.layout.update(title_text='Time Series Data', xaxis_rangeslider_visible=True)
     st.plotly_chart(fig)
-    
+
 plot_raw_data()
 
-#Forecasting with prophet
+# Forecasting with NeuralProphet
 df_train = data[['Date', 'Close']]
 df_train = df_train.rename(columns={"Date": "ds", "Close": "y"})
 
-m = Prophet()
-m.fit(df_train)
+m = NeuralProphet()
+m.fit(df_train, freq="D")
 
-future = m.make_future_dataframe(periods=period)
+future = m.make_future_dataframe(df=df_train, n_historic_predictions=True, periods=period)
 forecast = m.predict(future)
 
 st.subheader("Forecast data")
 st.write(forecast.tail())
 
+# Use NeuralProphet's native plotting
 st.write("Forecast data")
-fig1 = plot_plotly(m, forecast)
-st.plotly_chart(fig1)
-
+fig1 = m.plot(forecast)  # Corrected plotting method for NeuralProphet
+st.write(fig1)
 
 st.write("Forecast component")
 fig2 = m.plot_components(forecast)
