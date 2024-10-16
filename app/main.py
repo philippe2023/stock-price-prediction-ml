@@ -7,7 +7,8 @@ from datetime import date
 from prophet import Prophet
 from neuralprophet import NeuralProphet
 from plotly import graph_objs as go
-from prophet.plot import plot_plotly 
+from prophet.plot import plot_plotly
+from GoogleNews import GoogleNews  # Directly importing GoogleNews here
 
 # Set page layout
 st.set_page_config(layout="wide")
@@ -38,18 +39,56 @@ def plot_raw_data(data):
     fig.layout.update(title_text='Time Series Data', xaxis_rangeslider_visible=True)
     st.plotly_chart(fig)
 
+# Function to get news headlines using GoogleNews
+def get_titles(search):
+    googlenews = GoogleNews(lang='en')
+    googlenews.search(search)
+    result = googlenews.result()
+
+    stories = []
+    for item in result:
+        story = {
+            'title': item['title'],
+            'link': item['link']
+        }
+        stories.append(story)
+
+    return stories
+
+# Google News Page logic
+def google_news_page():
+    st.title("Google News Stock Search")
+
+    # Stock selector for news
+    selected_stock = st.selectbox("Select stock for news", stocks)
+    st.subheader(f"Latest Google News for {selected_stock}")
+
+    # Button to trigger news search
+    if st.button("Fetch News"):
+        st.write(f"Fetching news headlines for {selected_stock}...")
+
+        # Fetch news headlines from Google News
+        headlines = get_titles(selected_stock)
+
+        if headlines:
+            st.success("News fetched successfully!")
+            for i, headline in enumerate(headlines, 1):
+                st.markdown(f"{i}. [{headline['title']}]({headline['link']})")
+        else:
+            st.warning(f"No news headlines found for {selected_stock}.")
+
 # Main app function
 def main():
     # Sidebar for navigation
     st.sidebar.title("Stock App")
-    page = st.sidebar.radio("Go to", ["Home", "Visualization", "Prediction"])
+    page = st.sidebar.radio("Go to", ["Home", "Visualization", "Prediction", "Google News"])  # Added Google News
 
     # Home Page
     if page == "Home":
         st.title("Welcome to the Stock Prediction App")
         st.write("""
         This app allows you to predict stock prices using two models: **Prophet** and **NeuralProphet**.
-        
+
         ### Features:
         - **Visualization**: Explore raw stock data with interactive visualizations.
         - **Prophet**: Time-series forecasting developed by Facebook.
@@ -153,6 +192,10 @@ def main():
             st.write("Forecast component")
             fig2 = m.plot_components(forecast)
             st.write(fig2)
+
+    # Google News Page
+    elif page == "Google News":
+        google_news_page()  # Call the Google News page
 
 if __name__ == '__main__':
     main()
