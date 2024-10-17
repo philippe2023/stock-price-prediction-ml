@@ -8,7 +8,7 @@ from prophet import Prophet
 from neuralprophet import NeuralProphet
 from plotly import graph_objs as go
 from prophet.plot import plot_plotly
-from GoogleNews import GoogleNews  # Directly importing GoogleNews here
+from GoogleNews import GoogleNews 
 
 # Set page layout
 st.set_page_config(layout="wide")
@@ -77,11 +77,36 @@ def google_news_page():
         else:
             st.warning(f"No news headlines found for {selected_stock}.")
 
+# Dashboard Page logic
+def dashboard_page():
+    st.title("My Stock Dashboard")
+
+    # Stock selector for the dashboard
+    multi_select_dropdown = st.multiselect("Pick your assets", stocks)
+
+    # Date input fields for the dashboard
+    start = st.date_input('Start', value=pd.to_datetime('2010-01-01'))
+    end = st.date_input('End', value=pd.to_datetime('today'))
+
+    # Function to calculate relative return
+    def relative_return(df):
+        relative_returns = df.pct_change()
+        cumulative_return = (1 + relative_returns).cumprod() - 1
+        cumulative_return = cumulative_return.fillna(0)
+        return cumulative_return
+
+    # Only show chart if stocks are selected
+    if len(multi_select_dropdown) > 0:
+        # Download stock data and calculate relative returns
+        df = relative_return(yf.download(multi_select_dropdown, start, end)['Adj Close'])
+        st.write(f'Returns for stocks: {multi_select_dropdown}')
+        st.line_chart(df)
+
 # Main app function
 def main():
     # Sidebar for navigation
     st.sidebar.title("Stock App")
-    page = st.sidebar.radio("Go to", ["Home", "Visualization", "Prediction", "Google News"])  # Added Google News
+    page = st.sidebar.radio("Go to", ["Home", "Visualization", "Prediction", "Google News", "Dashboard"])  # Added Dashboard
 
     # Home Page
     if page == "Home":
@@ -93,6 +118,8 @@ def main():
         - **Visualization**: Explore raw stock data with interactive visualizations.
         - **Prophet**: Time-series forecasting developed by Facebook.
         - **NeuralProphet**: Neural network-based time-series forecasting.
+        - **Market News**: Get up-to-date news on your desired stock.
+        - **Personal Dashboard**: Compare your preferred stocks.
         """)
     
     # Visualization Page
@@ -196,6 +223,10 @@ def main():
     # Google News Page
     elif page == "Google News":
         google_news_page()  # Call the Google News page
+    
+    # Dashboard Page
+    elif page == "Dashboard":
+        dashboard_page()  # Call the Dashboard page
 
 if __name__ == '__main__':
     main()
